@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Attaché — a native iOS remote for omp</title>
-<meta name="description" content="Attaché drives omp coding-agent sessions from your phone: live streams, lock-screen approvals, advisor and subagent visibility — over your own Tailscale network, end to end.">
-<meta property="og:title" content="Attaché — a native iOS remote for omp">
-<meta property="og:description" content="Full visibility, zero terminal. Approvals on your lock screen, advisor and subagents live, every session in your pocket — over your own tailnet.">
+<title>Attaché · a native iOS remote for omp</title>
+<meta name="description" content="Attaché drives omp coding-agent sessions from your phone: live streams, lock-screen approvals, advisor and subagent visibility, all over your own Tailscale network.">
+<meta property="og:title" content="Attaché · a native iOS remote for omp">
+<meta property="og:description" content="Full visibility, zero terminal. Approvals on your lock screen, advisor and subagents live, every session in your pocket. Runs over your own tailnet.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://attache.bot">
+<meta property="og:image" content="https://attache.bot/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://attache.bot/og.png">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#060606">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23101012'/%3E%3Ctext x='50' y='72' font-family='Menlo,monospace' font-weight='bold' font-size='62' fill='%23FF6A2B' text-anchor='middle'%3E%C3%A5%3C/text%3E%3C/svg%3E">
@@ -404,7 +408,7 @@
         Attaché is a native iOS remote for <a href="https://omp.sh" style="color:var(--accent)">omp</a>,
         the coding agent with the IDE wired in. Watch live turn streams, answer tool
         approvals from your lock screen, see what the advisor flags and what every
-        subagent is doing — over your own Tailscale network, touching no one's cloud.
+        subagent is doing. It all runs over your own Tailscale network, with no cloud in the middle.
       </p>
       <div class="cta-row">
         <a class="cta" href="https://github.com/Skynet-Ventures/attache">Build it from source</a>
@@ -444,25 +448,25 @@
     <div class="sec-head rv">
       <div class="kicker">Full visibility, zero terminal</div>
       <h2>Everything omp shows in the TUI, native on iOS</h2>
-      <p>Attaché isn't a chat wrapper — it's the whole cockpit: approvals, advisor,
+      <p>Attaché isn't a chat wrapper. It's the whole cockpit: approvals, advisor,
       subagents, plans, diffs, models, cost. If omp knows it, your phone shows it.</p>
     </div>
     <div class="grid">
       <div class="card rv"><div class="ic">⚠</div><h3>Approvals on your lock screen</h3>
-        <p>Tool approvals arrive as push notifications with Allow / Deny actions — Face ID-gated,
-        end-to-end encrypted, working even with the app fully closed. Answer from the couch;
-        the TUI syncs instantly. "Always" rules are scoped, listed, and revocable.</p></div>
+        <p>Tool approvals arrive as push notifications with Allow and Deny actions. Face ID gated,
+        end-to-end encrypted, and they work with the app fully closed. Answer from the couch
+        and the TUI syncs instantly. "Always" rules are scoped, listed, and revocable.</p></div>
       <div class="card rv"><div class="ic">◆</div><h3>The advisor, first-class</h3>
         <p>When a watchdog model flags the working agent, the note renders as its own
-        voice block — forward it to the agent as a steer with one tap, or dismiss it.
+        voice block. Forward it to the agent as a steer with one tap, or dismiss it.
         Nothing the reviewer says gets buried in scrollback.</p></div>
       <div class="card rv"><div class="ic">◇</div><h3>Subagents, live</h3>
-        <p>The agent hub shows every task-tool worker as a live tile — current line, tokens,
-        calls — with full transcripts and mid-flight steering. Dispatch new workers from
+        <p>The agent hub shows every task-tool worker as a live tile with its current line,
+        token count and calls, plus full transcripts and mid-flight steering. Dispatch new workers from
         your phone.</p></div>
       <div class="card rv"><div class="ic">≡</div><h3>Plans &amp; diffs, reviewable</h3>
         <p>Plan mode renders as structured steps with live progress marks. Edits become
-        real diffs with ±counts and a full-screen review — request changes or
+        real diffs with ±counts and a full-screen review. Request changes or send
         <code>looks good</code> from anywhere.</p></div>
       <div class="card rv"><div class="ic">⑂</div><h3>Every session, every branch</h3>
         <p>Resume any stored session with deep full-text search, fork history at any
@@ -470,7 +474,7 @@
         tidy. Live Activities put the running turn in your Dynamic Island.</p></div>
       <div class="card rv"><div class="ic">$</div><h3>Models, roles &amp; cost</h3>
         <p>Switch models and thinking levels per session, cycle role presets, watch
-        context and spend tick in real time — with omp's fallback chains keeping the
+        context and spend tick in real time while omp's fallback chains keep the
         session alive through rate limits.</p></div>
     </div>
   </section>
@@ -512,13 +516,13 @@
       <div>
         <h2>Nothing relayed,<br>nothing readable.</h2>
         <p>Attaché talks straight to your bridge over WireGuard. The optional push relay
-        for lock-screen approvals is a stateless worker you deploy yourself — it forwards
-        ciphertext it cannot read, signed for Apple's push service, and stores nothing.</p>
+        for lock-screen approvals is a stateless worker you deploy yourself. It forwards
+        ciphertext it cannot read, signs it for Apple's push service, and stores nothing.</p>
         <ul>
-          <li>Direct over your tailnet — no accounts, no third-party servers</li>
+          <li>Direct over your tailnet, no accounts, no third-party servers</li>
           <li>Push payloads AES-256-GCM encrypted with per-device keys</li>
           <li>Pairing codes single-use; tokens hashed at rest, revocable</li>
-          <li>MIT licensed, front to back — bridge, app, and relay</li>
+          <li>MIT licensed front to back: bridge, app, and relay</li>
         </ul>
       </div>
       <div>
@@ -660,7 +664,7 @@
     await sleep(900);
     const typing = add(`<div class="p-typing"><i></i><i></i><i></i></div>`);
     await sleep(1400); typing.remove();
-    add(`<div class="p-agent">Heap profile points at retained buffers in the pool — patching <code>Put()</code>:</div>`);
+    add(`<div class="p-agent">Heap profile points at retained buffers in the pool. Patching <code>Put()</code>:</div>`);
     await sleep(1100);
     add(`<div class="p-tool"><span class="ic">✓</span>search&nbsp;<span style="color:rgba(244,244,242,.45)">bytes.Buffer in internal/</span><span class="meta">14 hits</span></div>`);
     await sleep(1000);
@@ -670,12 +674,12 @@
 
     const adv = add(`<div class="p-advisor">
       <div class="hd">◆ ADVISOR <span>after turn 14</span></div>
-      <div class="bd">Cap fix is right, but error paths skip <code style="font:500 8.5px var(--mono)">Put()</code> — suggest a defer in renderThumb.</div>
+      <div class="bd">Cap fix is right, but error paths skip <code style="font:500 8.5px var(--mono)">Put()</code>. Suggest a defer in renderThumb.</div>
       <div class="acts"><b>Ask agent to address</b><span>Dismiss</span></div></div>`);
     await sleep(2100);
     adv.querySelector("b").classList.add("pressed");
     await sleep(450);
-    add(`<div class="p-steer"><b>»</b><span>steer: address advisor note — defer Put() on error paths</span></div>`);
+    add(`<div class="p-steer"><b>»</b><span>steer: address advisor note, defer Put() on error paths</span></div>`);
     await sleep(1500);
 
     const ap = add(`<div class="p-approve">
@@ -695,7 +699,7 @@
     islandTurn.textContent = "T15"; pSub.textContent = "⑂ fix/resize-pool · turn 15 · 19m02s";
     ctxBar.style.width = "70%"; ctxLabel.textContent = "140.2k/200k · $4.01";
     await sleep(1100);
-    add(`<div class="p-agent">Baselines cleared — re-running the 5-minute load with <code>-memprofile</code>. RSS flat at 212&nbsp;MB. ✓</div>`);
+    add(`<div class="p-agent">Baselines cleared. Re-running the 5-minute load with <code>-memprofile</code>. RSS flat at 212&nbsp;MB. ✓</div>`);
     await sleep(4200);
 
     // fade out and loop
@@ -706,9 +710,9 @@
   if (reduced) {
     // Static tableau for reduced motion.
     add(`<div class="p-user">Find the leak in the resize pipeline and prove the fix with pprof.</div>`);
-    add(`<div class="p-agent">Heap profile points at retained buffers in the pool — patching <code>Put()</code>:</div>`);
+    add(`<div class="p-agent">Heap profile points at retained buffers in the pool. Patching <code>Put()</code>:</div>`);
     add(`<div class="p-tool"><span class="ic edit">±</span>edit&nbsp;<span style="color:rgba(244,244,242,.45)">pool.go</span><span class="meta"><span class="add">+11</span> <span class="del">−3</span></span></div>`);
-    add(`<div class="p-advisor"><div class="hd">◆ ADVISOR <span>after turn 14</span></div><div class="bd">Error paths skip <code style="font:500 8.5px var(--mono)">Put()</code> — suggest a defer in renderThumb.</div><div class="acts"><b>Ask agent to address</b><span>Dismiss</span></div></div>`);
+    add(`<div class="p-advisor"><div class="hd">◆ ADVISOR <span>after turn 14</span></div><div class="bd">Error paths skip <code style="font:500 8.5px var(--mono)">Put()</code>. Suggest a defer in renderThumb.</div><div class="acts"><b>Ask agent to address</b><span>Dismiss</span></div></div>`);
     add(`<div class="p-approve"><div class="hd">⚠ APPROVAL <span>destructive · bash</span></div><div class="cmd">rm -rf tmp/profiles.old</div><div class="btns"><i>Deny</i><i class="go">Allow once</i><i class="always">Always</i></div></div>`);
     document.querySelectorAll(".pi").forEach(el => el.classList.add("in"));
   } else {
