@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Attaché — a native iOS remote for omp</title>
+<meta name="description" content="Attaché drives omp coding-agent sessions from your phone: live streams, lock-screen approvals, advisor and subagent visibility — over your own Tailscale network, end to end.">
+<meta property="og:title" content="Attaché — a native iOS remote for omp">
+<meta property="og:description" content="Full visibility, zero terminal. Approvals on your lock screen, advisor and subagents live, every session in your pocket — over your own tailnet.">
+<meta property="og:type" content="website">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#060606">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23101012'/%3E%3Ctext x='50' y='72' font-family='Menlo,monospace' font-weight='bold' font-size='62' fill='%23FF6A2B' text-anchor='middle'%3E%C3%A5%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #060606;
+    --raised: #101012;
+    --raised-alt: #0C0C0E;
+    --chip: #141416;
+    --card: #0E0E10;
+    --code: #000;
+    --bubble: #1E1E22;
+    --text: #F4F4F2;
+    --accent: #FF6A2B;
+    --accent-hover: #FF8551;
+    --success: #30D158;
+    --warning: #FFD60A;
+    --danger: #FF453A;
+    --hairline: rgba(255,255,255,.08);
+    --hairline-faint: rgba(255,255,255,.05);
+    --hairline-strong: rgba(255,255,255,.10);
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: var(--text); text-decoration: none; }
+  ::selection { background: rgba(255,106,43,.35); }
+
+  @keyframes omblink { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+  @keyframes caretblink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }
+  @keyframes drift { from { background-position: 0 0 } to { background-position: 0 900px } }
+  @keyframes breathe { 0%,100% { opacity: .5; transform: scale(1) } 50% { opacity: .9; transform: scale(1.06) } }
+  @keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+
+  /* ambient layers */
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .5;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px);
+    animation: drift 60s linear infinite;
+  }
+  .glowfollow {
+    position: fixed; width: 640px; height: 640px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,106,43,.055), transparent 65%);
+    pointer-events: none; z-index: 0; transform: translate(-50%,-50%);
+    left: 70vw; top: 30vh;
+  }
+  .heroglow {
+    position: absolute; width: 720px; height: 720px; right: -180px; top: -120px;
+    background: radial-gradient(circle, rgba(255,106,43,.10), transparent 62%);
+    pointer-events: none; animation: breathe 9s ease-in-out infinite;
+  }
+  .gridbg {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 60% 20%, #000 30%, transparent 75%);
+            mask-image: radial-gradient(ellipse 75% 65% at 60% 20%, #000 30%, transparent 75%);
+  }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* reveal-on-scroll */
+  .rv { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .rv.in { opacity: 1; transform: none; }
+
+  /* ---------- nav ---------- */
+  nav { display: flex; align-items: center; gap: 12px; padding: 22px 0; }
+  .glyph {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--chip); border: 1px solid var(--hairline-strong);
+    display: flex; align-items: center; justify-content: center;
+    font: 700 17px var(--mono); color: var(--accent);
+    box-shadow: 0 0 0 rgba(255,106,43,0); transition: box-shadow .3s;
+  }
+  nav .glyph:hover { box-shadow: 0 0 24px rgba(255,106,43,.35); }
+  nav .name { font: 700 18px var(--sans); letter-spacing: -.02em; }
+  nav .links { margin-left: auto; display: flex; gap: 8px; }
+  .navchip {
+    height: 30px; padding: 0 13px; border-radius: 8px;
+    background: var(--chip); border: 1px solid var(--hairline-strong);
+    display: inline-flex; align-items: center; gap: 7px;
+    font: 500 12px var(--mono); color: rgba(244,244,242,.7);
+    transition: border-color .15s, color .15s, transform .1s;
+  }
+  .navchip:hover { border-color: rgba(255,106,43,.5); color: var(--text); }
+  .navchip:active { transform: scale(.95); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px;
+    align-items: center; padding: 64px 0 90px;
+  }
+  .hero h1 {
+    font: 700 clamp(34px, 5vw, 54px)/1.08 var(--sans);
+    letter-spacing: -.03em;
+  }
+  .hero h1 .om { color: var(--accent); text-shadow: 0 0 30px rgba(255,106,43,.4); }
+  .hero h1 .caret {
+    display: inline-block; width: .48em; height: .95em; margin-left: 6px;
+    background: var(--accent); vertical-align: text-bottom;
+    animation: caretblink 1.1s step-end infinite;
+  }
+  .hero .sub {
+    margin: 18px 0 30px; max-width: 46ch;
+    font: 400 16px/1.6 var(--sans); color: rgba(244,244,242,.62);
+  }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .cta {
+    position: relative; overflow: hidden;
+    height: 46px; padding: 0 22px; border-radius: 11px;
+    background: var(--accent); color: #000;
+    display: inline-flex; align-items: center; gap: 9px;
+    font: 600 14px var(--sans);
+    transition: background .15s, transform .1s, box-shadow .2s;
+  }
+  .cta:hover { background: var(--accent-hover); box-shadow: 0 6px 30px rgba(255,106,43,.35); }
+  .cta:active { transform: scale(.97); }
+  .cta.ghost { background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,.16); }
+  .cta.ghost:hover { border-color: rgba(255,255,255,.35); background: transparent; box-shadow: none; }
+  .hero .fine { margin-top: 22px; font: 400 11px var(--mono); color: rgba(244,244,242,.35); }
+  .hero .fine b { color: rgba(244,244,242,.55); font-weight: 500; }
+
+  /* ticker */
+  .ticker-wrap {
+    overflow: hidden; border-top: 1px solid var(--hairline-faint); border-bottom: 1px solid var(--hairline-faint);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .ticker { display: flex; gap: 34px; width: max-content; padding: 11px 0; animation: tick 36s linear infinite; }
+  @keyframes tick { to { transform: translateX(-50%); } }
+  .ticker span { font: 500 11px var(--mono); color: rgba(244,244,242,.38); white-space: nowrap; }
+  .ticker span::before { content: "·"; color: rgba(255,106,43,.6); margin-right: 34px; }
+
+  /* ---------- phone mockup ---------- */
+  .phone-col { display: flex; justify-content: center; perspective: 1200px; }
+  .phone {
+    width: 322px; border-radius: 42px; padding: 10px;
+    background: #111;
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 30px 90px rgba(0,0,0,.7), 0 0 130px rgba(255,106,43,.08);
+    transform: rotateY(-6deg) rotateX(2deg);
+    animation: floaty 7s ease-in-out infinite;
+    transition: transform .5s ease;
+  }
+  .phone:hover { transform: rotateY(0deg) rotateX(0deg); }
+  .screen {
+    border-radius: 34px; overflow: hidden; background: var(--bg);
+    border: 1px solid rgba(255,255,255,.06);
+    display: flex; flex-direction: column; height: 596px;
+  }
+  .p-status { display: flex; justify-content: center; padding: 10px 0 6px; }
+  .island {
+    height: 24px; border-radius: 13px; background: #000;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 9px;
+    border: 1px solid rgba(255,255,255,.05);
+    width: 92px; transition: width .45s cubic-bezier(.3,.8,.3,1);
+    overflow: hidden; white-space: nowrap;
+  }
+  .island.wide { width: 200px; }
+  .island .g { font: 700 10px var(--mono); color: var(--accent); }
+  .island .mid { font: 500 8.5px var(--mono); color: var(--warning); opacity: 0; transition: opacity .3s .2s; }
+  .island.wide .mid { opacity: 1; }
+  .island .t { display: flex; align-items: center; gap: 4px; font: 600 9px var(--mono); color: rgba(244,244,242,.8); }
+  .island .t i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: omblink 1.6s infinite; }
+  .p-head { padding: 8px 14px 0; flex-shrink: 0; }
+  .p-title { display: flex; align-items: center; gap: 8px; }
+  .p-title .back { color: var(--accent); font: 600 13px var(--sans); }
+  .p-title .tt { font: 600 12.5px var(--sans); letter-spacing: -.01em; }
+  .p-sub { font: 400 8.5px var(--mono); color: rgba(244,244,242,.45); margin: 2px 0 7px 18px; }
+  .p-ctx { display: flex; align-items: center; gap: 7px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline); }
+  .p-bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .p-bar i { display: block; width: 62%; height: 100%; background: var(--accent); border-radius: 2px; transition: width 1s ease; }
+  .p-ctx span { font: 400 7.5px var(--mono); color: rgba(244,244,242,.45); }
+  .p-stream {
+    padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px;
+    flex: 1; overflow: hidden; justify-content: flex-end;
+  }
+  .pi { opacity: 0; transform: translateY(14px); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.7,.2,1); }
+  .pi.in { opacity: 1; transform: none; }
+  .pi.gone { opacity: 0; transform: translateY(-10px); transition: opacity .35s, transform .35s; }
+  .p-user {
+    align-self: flex-end; max-width: 86%;
+    background: var(--bubble); border-radius: 12px 12px 4px 12px;
+    padding: 7px 10px; font: 400 9.5px/1.45 var(--sans);
+  }
+  .p-agent { font: 400 9.5px/1.5 var(--sans); color: rgba(244,244,242,.8); }
+  .p-agent code { font: 500 8.5px var(--mono); color: var(--text); }
+  .p-typing { display: flex; gap: 3px; padding: 2px; }
+  .p-typing i { width: 5px; height: 5px; border-radius: 50%; background: rgba(244,244,242,.6); animation: omblink 1s infinite; }
+  .p-typing i:nth-child(2) { animation-delay: .15s } .p-typing i:nth-child(3) { animation-delay: .3s }
+  .p-tool {
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 9px;
+    padding: 6px 9px; display: flex; align-items: center; gap: 7px;
+    font: 500 8.5px var(--mono); color: rgba(244,244,242,.7);
+  }
+  .p-tool .ic { color: var(--success); } .p-tool .ic.edit { color: var(--accent); }
+  .p-tool .meta { margin-left: auto; color: rgba(244,244,242,.35); font-weight: 400; }
+  .p-tool .add { color: var(--success); } .p-tool .del { color: var(--danger); }
+  .p-advisor { background: rgba(255,106,43,.07); border: 1px solid rgba(255,106,43,.3); border-radius: 9px; padding: 7px 9px; }
+  .p-advisor .hd { display: flex; gap: 6px; font: 600 7.5px var(--mono); letter-spacing: .1em; color: var(--accent); margin-bottom: 3px; }
+  .p-advisor .hd span { color: rgba(244,244,242,.4); letter-spacing: 0; font-weight: 400; }
+  .p-advisor .bd { font: 400 9px/1.45 var(--sans); color: rgba(244,244,242,.85); }
+  .p-advisor .acts { display: flex; gap: 10px; margin-top: 5px; font: 500 8.5px var(--sans); }
+  .p-advisor .acts b { color: var(--accent); font-weight: 500; cursor: default; }
+  .p-advisor .acts b.pressed { text-decoration: underline; }
+  .p-advisor .acts span { color: rgba(244,244,242,.45); }
+  .p-steer { display: flex; gap: 6px; font: 400 8.5px/1.45 var(--mono); color: rgba(244,244,242,.5); }
+  .p-steer b { color: var(--accent); font-weight: 400; }
+  .p-approve { background: var(--card); border: 1px solid rgba(255,214,10,.35); border-radius: 9px; padding: 7px 9px; }
+  .p-approve .hd { display: flex; gap: 6px; font: 600 7.5px var(--mono); letter-spacing: .1em; color: var(--warning); margin-bottom: 4px; }
+  .p-approve .hd span { color: rgba(244,244,242,.4); letter-spacing: 0; font-weight: 400; }
+  .p-approve .cmd { background: var(--code); border-radius: 6px; padding: 5px 8px; font: 400 8.5px var(--mono); margin-bottom: 6px; }
+  .p-approve .btns { display: flex; gap: 6px; }
+  .p-approve .btns i {
+    flex: 1; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font: 500 8.5px var(--sans); font-style: normal; color: rgba(244,244,242,.7);
+    border: 1px solid rgba(255,255,255,.15); transition: transform .12s, background .2s;
+  }
+  .p-approve .btns i.go { flex: 1.4; background: var(--accent); border: none; color: #000; font-weight: 600; }
+  .p-approve .btns i.go.pressed { transform: scale(.9); background: var(--accent-hover); }
+  .p-approve .btns i.always { border-color: rgba(255,106,43,.5); color: var(--accent); }
+  .p-resolved { display: flex; gap: 6px; font: 500 8.5px var(--mono); color: var(--success); }
+  .p-resolved span { color: rgba(244,244,242,.35); font-weight: 400; }
+  .p-composer {
+    border-top: 1px solid var(--hairline); background: #0A0A0B;
+    padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;
+  }
+  .p-chips { display: flex; gap: 6px; }
+  .p-chips i {
+    height: 18px; padding: 0 7px; border-radius: 5px; font: 600 7.5px var(--mono); font-style: normal;
+    display: inline-flex; align-items: center;
+    background: var(--chip); border: 1px solid var(--hairline-strong); color: rgba(244,244,242,.6);
+  }
+  .p-chips i.mode { background: rgba(255,106,43,.14); border-color: rgba(255,106,43,.4); color: var(--accent); }
+  .p-input { display: flex; align-items: center; gap: 7px; }
+  .p-field {
+    flex: 1; height: 28px; border-radius: 9px; background: var(--chip);
+    border: 1px solid var(--hairline-strong); display: flex; align-items: center;
+    padding: 0 10px; font: 400 9.5px var(--sans); color: rgba(244,244,242,.35);
+  }
+  .p-send { width: 24px; height: 24px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; color: #000; font: 700 11px var(--sans); }
+
+  /* ---------- sections ---------- */
+  .sec-head { text-align: center; margin-bottom: 14px; }
+  .sec-head .kicker { font: 600 11px var(--mono); letter-spacing: .14em; color: var(--accent); text-transform: uppercase; }
+  .sec-head h2 { font: 700 clamp(24px, 3.4vw, 32px)/1.15 var(--sans); letter-spacing: -.02em; margin-top: 10px; }
+  .sec-head p { margin: 12px auto 0; max-width: 52ch; font: 400 14.5px/1.6 var(--sans); color: rgba(244,244,242,.55); }
+
+  .features { padding: 60px 0 40px; }
+  .grid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card {
+    position: relative; overflow: hidden;
+    background: var(--raised-alt); border: 1px solid var(--hairline-faint);
+    border-radius: 14px; padding: 22px;
+    transition: border-color .25s, background .25s, transform .25s;
+  }
+  .card::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(255,106,43,.08), transparent 60%);
+    transition: opacity .3s;
+  }
+  .card:hover { border-color: rgba(255,106,43,.3); background: var(--raised); transform: translateY(-3px); }
+  .card:hover::after { opacity: 1; }
+  .card .ic { font: 500 16px var(--mono); color: var(--accent); }
+  .card h3 { margin: 12px 0 7px; font: 600 15px var(--sans); letter-spacing: -.01em; }
+  .card p { font: 400 12.5px/1.6 var(--sans); color: rgba(244,244,242,.55); }
+  .card code { font: 500 11px var(--mono); color: rgba(244,244,242,.8); }
+
+  /* ---------- how ---------- */
+  .how { padding: 60px 0 30px; }
+  .steps { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step { background: var(--raised-alt); border: 1px solid var(--hairline-faint); border-radius: 14px; padding: 22px; }
+  .step .n { font: 600 11px var(--mono); color: var(--accent); }
+  .step h3 { margin: 10px 0 8px; font: 600 15px var(--sans); }
+  .step p { font: 400 12.5px/1.6 var(--sans); color: rgba(244,244,242,.55); }
+  .termline {
+    margin-top: 12px; background: var(--code); border: 1px solid var(--hairline-strong);
+    border-radius: 9px; padding: 10px 12px;
+    font: 400 11.5px var(--mono); overflow: hidden; white-space: nowrap;
+  }
+  .termline .p { color: rgba(244,244,242,.4); }
+  .termline .tcaret { display: inline-block; width: 6px; height: 12px; background: var(--accent); vertical-align: -1px; animation: caretblink 1s step-end infinite; }
+  .codepair { margin-top: 12px; display: flex; gap: 6px; }
+  .codepair i {
+    flex: 1; height: 34px; border-radius: 8px; background: var(--code);
+    border: 1px solid rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center;
+    font: 600 13px var(--mono); font-style: normal; color: rgba(244,244,242,.25);
+    transition: border-color .25s, color .25s;
+  }
+  .codepair i.on { border-color: rgba(255,106,43,.5); color: var(--text); }
+  .paired-flash { margin-top: 8px; font: 500 10px var(--mono); color: var(--success); opacity: 0; transition: opacity .4s; }
+  .paired-flash.show { opacity: 1; }
+  .lockrow { margin-top: 12px; background: var(--code); border: 1px solid var(--hairline-strong); border-radius: 9px; padding: 9px 11px;
+    transform: translateY(-6px); opacity: 0; transition: opacity .5s, transform .5s cubic-bezier(.2,.7,.2,1); }
+  .lockrow.show { opacity: 1; transform: none; }
+  .lockrow .t { display: flex; gap: 6px; align-items: center; font: 600 10.5px var(--sans); }
+  .lockrow .t i { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); animation: omblink 1.6s infinite; }
+  .lockrow .b { margin: 3px 0 7px 12px; font: 400 10px var(--mono); color: rgba(244,244,242,.55); }
+  .lockrow .a { display: flex; gap: 6px; margin-left: 12px; }
+  .lockrow .a i {
+    padding: 3px 10px; border-radius: 6px; font: 500 9.5px var(--sans); font-style: normal;
+    border: 1px solid rgba(255,255,255,.18); color: rgba(244,244,242,.7);
+  }
+  .lockrow .a i.y { background: var(--accent); border: none; color: #000; font-weight: 600; }
+
+  /* ---------- privacy ---------- */
+  .privacy { padding: 60px 0 70px; }
+  .privacy .inner {
+    background: var(--raised-alt); border: 1px solid var(--hairline);
+    border-radius: 18px; padding: 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .privacy .inner::before {
+    content: ""; position: absolute; width: 500px; height: 500px; right: -160px; bottom: -260px;
+    background: radial-gradient(circle, rgba(255,106,43,.08), transparent 60%); pointer-events: none;
+  }
+  .privacy h2 { font: 700 24px/1.2 var(--sans); letter-spacing: -.02em; }
+  .privacy p { margin-top: 12px; font: 400 13.5px/1.65 var(--sans); color: rgba(244,244,242,.55); }
+  .privacy ul { list-style: none; margin-top: 6px; }
+  .privacy li { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; font: 400 13px/1.5 var(--sans); color: rgba(244,244,242,.75); }
+  .privacy li::before { content: "✓"; font: 600 11px var(--mono); color: var(--success); }
+
+  .flowsvg { width: 100%; height: auto; display: block; }
+  .flowsvg text { font: 500 11px var(--mono); fill: rgba(244,244,242,.6); }
+  .flowsvg text.a { fill: var(--accent); }
+  .flowsvg text.s { fill: var(--success); font-size: 9.5px; }
+  .flowsvg .wire { stroke: rgba(255,255,255,.14); stroke-width: 1.4; fill: none; }
+  .flowsvg .node { fill: var(--chip); stroke: rgba(255,255,255,.12); }
+  .flowsvg .pkt { fill: var(--accent); }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--hairline-faint);
+    padding: 30px 0 46px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  footer .fine { font: 400 11px var(--mono); color: rgba(244,244,242,.35); }
+  footer .links { margin-left: auto; display: flex; gap: 8px; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding: 36px 0 50px; }
+    .phone-col { order: -1; }
+    .phone { width: 292px; transform: none; animation: none; }
+    .screen { height: 560px; }
+    .grid, .steps { grid-template-columns: 1fr; }
+    .privacy .inner { grid-template-columns: 1fr; padding: 28px; }
+    .glowfollow { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .rv, .pi { opacity: 1 !important; transform: none !important; }
+    .lockrow { opacity: 1; transform: none; }
+    .codepair i { color: var(--text); border-color: rgba(255,106,43,.5); }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="glowfollow" id="glow"></div>
+
+<div class="wrap">
+  <nav>
+    <div class="glyph">å</div>
+    <div class="name">Attaché</div>
+    <div class="links">
+      <a class="navchip" href="https://github.com/Skynet-Ventures/attache">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="rgba(244,244,242,.7)"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        github
+      </a>
+      <a class="navchip" href="#how">get started</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="heroglow"></div>
+    <div class="gridbg"></div>
+    <div class="rv in">
+      <h1>Your <span class="om">omp</span> sessions,<br>in your pocket.<span class="caret"></span></h1>
+      <p class="sub">
+        Attaché is a native iOS remote for <a href="https://omp.sh" style="color:var(--accent)">omp</a>,
+        the coding agent with the IDE wired in. Watch live turn streams, answer tool
+        approvals from your lock screen, see what the advisor flags and what every
+        subagent is doing — over your own Tailscale network, touching no one's cloud.
+      </p>
+      <div class="cta-row">
+        <a class="cta" href="https://github.com/Skynet-Ventures/attache">Build it from source</a>
+        <a class="cta ghost" href="#how">How it works</a>
+      </div>
+      <p class="fine"><b>App Store release in the works.</b> Open source · MIT · SwiftUI + a tiny Bun daemon</p>
+    </div>
+
+    <div class="phone-col rv in">
+      <div class="phone"><div class="screen">
+        <div class="p-status"><div class="island" id="island">
+          <span class="g">å</span><span class="mid" id="islandMid">1 approval waiting</span><span class="t"><i></i><span id="islandTurn">T14</span></span>
+        </div></div>
+        <div class="p-head">
+          <div class="p-title"><span class="back">‹</span><span class="tt">Fix decoder memory leak</span></div>
+          <div class="p-sub" id="pSub">⑂ fix/resize-pool · turn 14 · 18m12s</div>
+          <div class="p-ctx"><div class="p-bar"><i id="ctxBar"></i></div><span id="ctxLabel">132.4k/200k · $3.84</span></div>
+        </div>
+        <div class="p-stream" id="stream"></div>
+        <div class="p-composer">
+          <div class="p-chips"><i class="mode">CHAT ▾</i><i>@default ▾</i><i>deepseek-v4 ▾</i><i>/</i></div>
+          <div class="p-input"><div class="p-field">Message omp…</div><div class="p-send">↑</div></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+</div>
+
+<div class="ticker-wrap rv">
+  <div class="ticker" id="ticker">
+    <span>live turn streams</span><span>lock-screen approvals</span><span>advisor visibility</span><span>subagent hub</span><span>plan review</span><span>hashline diffs</span><span>branch any turn</span><span>deep session search</span><span>model roles</span><span>fallback chains</span><span>snapcompact</span><span>wake-on-lan</span><span>live activities</span><span>E2E push</span><span>your tailnet only</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="features">
+    <div class="sec-head rv">
+      <div class="kicker">Full visibility, zero terminal</div>
+      <h2>Everything omp shows in the TUI, native on iOS</h2>
+      <p>Attaché isn't a chat wrapper — it's the whole cockpit: approvals, advisor,
+      subagents, plans, diffs, models, cost. If omp knows it, your phone shows it.</p>
+    </div>
+    <div class="grid">
+      <div class="card rv"><div class="ic">⚠</div><h3>Approvals on your lock screen</h3>
+        <p>Tool approvals arrive as push notifications with Allow / Deny actions — Face ID-gated,
+        end-to-end encrypted, working even with the app fully closed. Answer from the couch;
+        the TUI syncs instantly. "Always" rules are scoped, listed, and revocable.</p></div>
+      <div class="card rv"><div class="ic">◆</div><h3>The advisor, first-class</h3>
+        <p>When a watchdog model flags the working agent, the note renders as its own
+        voice block — forward it to the agent as a steer with one tap, or dismiss it.
+        Nothing the reviewer says gets buried in scrollback.</p></div>
+      <div class="card rv"><div class="ic">◇</div><h3>Subagents, live</h3>
+        <p>The agent hub shows every task-tool worker as a live tile — current line, tokens,
+        calls — with full transcripts and mid-flight steering. Dispatch new workers from
+        your phone.</p></div>
+      <div class="card rv"><div class="ic">≡</div><h3>Plans &amp; diffs, reviewable</h3>
+        <p>Plan mode renders as structured steps with live progress marks. Edits become
+        real diffs with ±counts and a full-screen review — request changes or
+        <code>looks good</code> from anywhere.</p></div>
+      <div class="card rv"><div class="ic">⑂</div><h3>Every session, every branch</h3>
+        <p>Resume any stored session with deep full-text search, fork history at any
+        turn, group work into projects, and start scratch sessions that keep themselves
+        tidy. Live Activities put the running turn in your Dynamic Island.</p></div>
+      <div class="card rv"><div class="ic">$</div><h3>Models, roles &amp; cost</h3>
+        <p>Switch models and thinking levels per session, cycle role presets, watch
+        context and spend tick in real time — with omp's fallback chains keeping the
+        session alive through rate limits.</p></div>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="sec-head rv">
+      <div class="kicker">Two pieces, five minutes</div>
+      <h2>Runs on your machines, pairs like a camera</h2>
+    </div>
+    <div class="steps">
+      <div class="step rv">
+        <div class="n">01</div><h3>Start the bridge</h3>
+        <p>A small Bun daemon on the machine that runs omp. It owns the
+        <code style="font:500 11px var(--mono)">omp --mode rpc</code> processes and prints a pairing code.</p>
+        <div class="termline"><span class="p">$</span> <span id="termCmd"></span><span class="tcaret"></span></div>
+      </div>
+      <div class="step rv">
+        <div class="n">02</div><h3>Pair your phone</h3>
+        <p>Enter the tailnet address and single-use code. A 256-bit token lands in your
+        Keychain; the bridge keeps only its hash. Multiple machines, one app.</p>
+        <div class="codepair"><i id="c0">K7</i><i id="c1">4F</i><i id="c2">9Q</i><i id="c3">2X</i></div>
+        <div class="paired-flash" id="pairedFlash">✓ devbox paired · key exchanged</div>
+      </div>
+      <div class="step rv">
+        <div class="n">03</div><h3>Go outside</h3>
+        <p>Tailscale carries the rest. Streams follow you, approvals find your lock
+        screen, and the session never notices you left the desk.</p>
+        <div class="lockrow" id="lockrow">
+          <div class="t"><i></i>Approval · bash</div>
+          <div class="b">git push origin main</div>
+          <div class="a"><i class="y">Allow once</i><i>Deny</i></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="privacy">
+    <div class="inner rv">
+      <div>
+        <h2>Nothing relayed,<br>nothing readable.</h2>
+        <p>Attaché talks straight to your bridge over WireGuard. The optional push relay
+        for lock-screen approvals is a stateless worker you deploy yourself — it forwards
+        ciphertext it cannot read, signed for Apple's push service, and stores nothing.</p>
+        <ul>
+          <li>Direct over your tailnet — no accounts, no third-party servers</li>
+          <li>Push payloads AES-256-GCM encrypted with per-device keys</li>
+          <li>Pairing codes single-use; tokens hashed at rest, revocable</li>
+          <li>MIT licensed, front to back — bridge, app, and relay</li>
+        </ul>
+      </div>
+      <div>
+        <svg class="flowsvg" viewBox="0 0 440 240" aria-label="Push flow: bridge encrypts, relay forwards ciphertext to APNs, decrypted on device">
+          <rect class="node" x="10" y="30" width="96" height="34" rx="9"/>
+          <text x="58" y="51" text-anchor="middle">bridge</text>
+          <rect class="node" x="180" y="30" width="100" height="34" rx="9"/>
+          <text x="230" y="51" text-anchor="middle">your relay</text>
+          <rect class="node" x="350" y="30" width="80" height="34" rx="9"/>
+          <text x="390" y="51" text-anchor="middle">APNs</text>
+          <rect class="node" x="180" y="176" width="100" height="34" rx="9"/>
+          <text x="230" y="197" text-anchor="middle">📱 Attaché</text>
+
+          <path id="w1" class="wire" d="M106 47 H180"/>
+          <path id="w2" class="wire" d="M280 47 H350"/>
+          <path id="w3" class="wire" d="M390 64 V120 H230 V176"/>
+          <path id="w4" class="wire" d="M58 64 V193 H180"/>
+
+          <text class="a" x="118" y="38" font-size="9">encrypt</text>
+          <text class="s" x="196" y="80">stores nothing</text>
+          <text class="s" x="288" y="150">🔒 decrypted on-device</text>
+          <text class="a" x="66" y="150" font-size="9">WireGuard</text>
+
+          <circle class="pkt" r="3.5"><animateMotion dur="2.2s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1"><mpath href="#w1"/></animateMotion></circle>
+          <circle class="pkt" r="3.5"><animateMotion dur="2.2s" begin="0.7s" repeatCount="indefinite"><mpath href="#w2"/></animateMotion></circle>
+          <circle class="pkt" r="3.5"><animateMotion dur="3.4s" begin="1.4s" repeatCount="indefinite"><mpath href="#w3"/></animateMotion></circle>
+          <circle class="pkt" r="3.5" fill="#30D158"><animateMotion dur="3.2s" repeatCount="indefinite"><mpath href="#w4"/></animateMotion></circle>
+
+          <text x="10" y="232" fill="rgba(244,244,242,.35)" font-size="10">your code never leaves your machines</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="glyph" style="width:30px;height:30px;font-size:13px">å</div>
+    <div class="fine">Attaché · a native remote for <a href="https://omp.sh" style="color:rgba(244,244,242,.55)">omp</a> · MIT</div>
+    <div class="links">
+      <a class="navchip" href="https://github.com/Skynet-Ventures/attache">source</a>
+      <a class="navchip" href="https://github.com/Skynet-Ventures/attache/issues">issues</a>
+      <a class="navchip" href="https://github.com/Skynet-Ventures/attache#quick-start">docs</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ----- scroll reveals ----- */
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  }, { threshold: .12 });
+  document.querySelectorAll(".rv").forEach(el => io.observe(el));
+
+  /* ----- pointer glow + card spotlight ----- */
+  if (!reduced && matchMedia("(pointer: fine)").matches) {
+    const glow = document.getElementById("glow");
+    let tx = innerWidth * .7, ty = innerHeight * .3, x = tx, y = ty;
+    addEventListener("pointermove", e => { tx = e.clientX; ty = e.clientY; });
+    (function lerp() {
+      x += (tx - x) * .06; y += (ty - y) * .06;
+      glow.style.left = x + "px"; glow.style.top = y + "px";
+      requestAnimationFrame(lerp);
+    })();
+    document.querySelectorAll(".card").forEach(card => {
+      card.addEventListener("pointermove", e => {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+        card.style.setProperty("--my", (e.clientY - r.top) + "px");
+      });
+    });
+  }
+
+  /* ----- duplicate ticker content for seamless loop ----- */
+  const ticker = document.getElementById("ticker");
+  ticker.innerHTML += ticker.innerHTML;
+
+  /* ----- terminal command typing loop ----- */
+  const CMD = "bunx attache-bridge serve";
+  const termCmd = document.getElementById("termCmd");
+  if (reduced) { termCmd.textContent = CMD; }
+  else {
+    let ti = 0, dir = 1;
+    setInterval(() => {
+      ti += dir;
+      if (ti >= CMD.length + 14) { dir = 0; setTimeout(() => { ti = 0; dir = 1; }, 400); }
+      termCmd.textContent = CMD.slice(0, Math.min(ti, CMD.length));
+    }, 70);
+  }
+
+  /* ----- pairing code loop ----- */
+  const cells = [0,1,2,3].map(i => document.getElementById("c" + i));
+  const flash = document.getElementById("pairedFlash");
+  if (reduced) { cells.forEach(c => c.classList.add("on")); flash.classList.add("show"); }
+  else {
+    (function pairLoop() {
+      cells.forEach(c => c.classList.remove("on")); flash.classList.remove("show");
+      cells.forEach((c, i) => setTimeout(() => c.classList.add("on"), 900 + i * 380));
+      setTimeout(() => flash.classList.add("show"), 900 + 4 * 380 + 250);
+      setTimeout(pairLoop, 7000);
+    })();
+  }
+
+  /* ----- lock notification loop ----- */
+  const lock = document.getElementById("lockrow");
+  if (reduced) lock.classList.add("show");
+  else setInterval(() => {
+    lock.classList.remove("show");
+    setTimeout(() => lock.classList.add("show"), 900);
+  }, 6500);
+  setTimeout(() => lock.classList.add("show"), 1200);
+
+  /* ----- the hero phone: a choreographed live session ----- */
+  const stream = document.getElementById("stream");
+  const island = document.getElementById("island");
+  const islandTurn = document.getElementById("islandTurn");
+  const ctxBar = document.getElementById("ctxBar");
+  const ctxLabel = document.getElementById("ctxLabel");
+  const pSub = document.getElementById("pSub");
+
+  const H = s => { const d = document.createElement("div"); d.innerHTML = s; return d.firstElementChild; };
+  function add(html) {
+    const el = H(html); el.classList.add("pi");
+    stream.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("in")));
+    while (stream.children.length > 7) stream.removeChild(stream.firstChild);
+    return el;
+  }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  async function demo() {
+    stream.innerHTML = "";
+    island.classList.remove("wide");
+    islandTurn.textContent = "T14"; pSub.textContent = "⑂ fix/resize-pool · turn 14 · 18m12s";
+    ctxBar.style.width = "62%"; ctxLabel.textContent = "124.1k/200k · $3.61";
+
+    add(`<div class="p-user">Find the leak in the resize pipeline and prove the fix with pprof.</div>`);
+    await sleep(900);
+    const typing = add(`<div class="p-typing"><i></i><i></i><i></i></div>`);
+    await sleep(1400); typing.remove();
+    add(`<div class="p-agent">Heap profile points at retained buffers in the pool — patching <code>Put()</code>:</div>`);
+    await sleep(1100);
+    add(`<div class="p-tool"><span class="ic">✓</span>search&nbsp;<span style="color:rgba(244,244,242,.45)">bytes.Buffer in internal/</span><span class="meta">14 hits</span></div>`);
+    await sleep(1000);
+    add(`<div class="p-tool"><span class="ic edit">±</span>edit&nbsp;<span style="color:rgba(244,244,242,.45)">pool.go</span><span class="meta"><span class="add">+11</span> <span class="del">−3</span></span></div>`);
+    ctxBar.style.width = "66%"; ctxLabel.textContent = "132.4k/200k · $3.84";
+    await sleep(1400);
+
+    const adv = add(`<div class="p-advisor">
+      <div class="hd">◆ ADVISOR <span>after turn 14</span></div>
+      <div class="bd">Cap fix is right, but error paths skip <code style="font:500 8.5px var(--mono)">Put()</code> — suggest a defer in renderThumb.</div>
+      <div class="acts"><b>Ask agent to address</b><span>Dismiss</span></div></div>`);
+    await sleep(2100);
+    adv.querySelector("b").classList.add("pressed");
+    await sleep(450);
+    add(`<div class="p-steer"><b>»</b><span>steer: address advisor note — defer Put() on error paths</span></div>`);
+    await sleep(1500);
+
+    const ap = add(`<div class="p-approve">
+      <div class="hd">⚠ APPROVAL <span>destructive · bash</span></div>
+      <div class="cmd">rm -rf tmp/profiles.old</div>
+      <div class="btns"><i>Deny</i><i class="go">Allow once</i><i class="always">Always</i></div></div>`);
+    island.classList.add("wide");
+    await sleep(2300);
+    ap.querySelector(".go").classList.add("pressed");
+    await sleep(400);
+    island.classList.remove("wide");
+    ap.classList.add("gone");
+    await sleep(380); ap.remove();
+    add(`<div class="p-resolved">✓ allowed once <span>· synced to TUI</span></div>`);
+    await sleep(700);
+    add(`<div class="p-tool"><span class="ic">$</span>bash&nbsp;<span style="color:rgba(244,244,242,.45)">rm -rf tmp/profiles.old</span><span class="meta">exit 0 · 0.3s</span></div>`);
+    islandTurn.textContent = "T15"; pSub.textContent = "⑂ fix/resize-pool · turn 15 · 19m02s";
+    ctxBar.style.width = "70%"; ctxLabel.textContent = "140.2k/200k · $4.01";
+    await sleep(1100);
+    add(`<div class="p-agent">Baselines cleared — re-running the 5-minute load with <code>-memprofile</code>. RSS flat at 212&nbsp;MB. ✓</div>`);
+    await sleep(4200);
+
+    // fade out and loop
+    [...stream.children].forEach((c, i) => setTimeout(() => c.classList.add("gone"), i * 60));
+    await sleep(900);
+    demo();
+  }
+  if (reduced) {
+    // Static tableau for reduced motion.
+    add(`<div class="p-user">Find the leak in the resize pipeline and prove the fix with pprof.</div>`);
+    add(`<div class="p-agent">Heap profile points at retained buffers in the pool — patching <code>Put()</code>:</div>`);
+    add(`<div class="p-tool"><span class="ic edit">±</span>edit&nbsp;<span style="color:rgba(244,244,242,.45)">pool.go</span><span class="meta"><span class="add">+11</span> <span class="del">−3</span></span></div>`);
+    add(`<div class="p-advisor"><div class="hd">◆ ADVISOR <span>after turn 14</span></div><div class="bd">Error paths skip <code style="font:500 8.5px var(--mono)">Put()</code> — suggest a defer in renderThumb.</div><div class="acts"><b>Ask agent to address</b><span>Dismiss</span></div></div>`);
+    add(`<div class="p-approve"><div class="hd">⚠ APPROVAL <span>destructive · bash</span></div><div class="cmd">rm -rf tmp/profiles.old</div><div class="btns"><i>Deny</i><i class="go">Allow once</i><i class="always">Always</i></div></div>`);
+    document.querySelectorAll(".pi").forEach(el => el.classList.add("in"));
+  } else {
+    demo();
+  }
+})();
+</script>
+
+</body>
+</html>
